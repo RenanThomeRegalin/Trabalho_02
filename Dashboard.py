@@ -72,13 +72,33 @@ manutencao_maquina.loc[manutencao_maquina['maintenance_required'] == 'Unknown', 
 
 manutencao_maquina.reset_index(drop=True, inplace=True)
 
+qtd_maquina_manutencao = manutencao_maquina.groupby('machine').size()
+
+qtd_maquina_manutencao = pd.DataFrame({
+    'Máquina' : qtd_maquina_manutencao.index,
+    'QTD_manutencao' : qtd_maquina_manutencao
+})
+qtd_maquina_manutencao.reset_index(drop= True, inplace= True)
+
+manutencao_maquina_mes = manutencao_maquina.groupby('mes').size()
+manutencao_maquina_mes = pd.DataFrame({
+    'Mes' : manutencao_maquina_mes.index,
+    'qtd' : manutencao_maquina_mes
+})
+
+media_vida_util = manutencao_maquina.groupby('machine')[['predicted_remaining_life']].mean().reset_index()
+
 #----------------------------------
 #         Gráficos
 #----------------------------------
 
+## Média Sensores
 fig_media_total = px.bar(df_medias,
                          y= 'Media',
-                         x= 'Feature')
+                         x= 'Feature',
+                         text_auto= True,
+                         color= 'Feature',
+                         title= 'Média dos valores lidos dos sensores das máquinas')
 
 fig_media_temperatura = px.bar(media_sensores,
                                y= 'Temperatura',
@@ -109,17 +129,69 @@ fig_media_consumo_energia = px.bar(media_sensores,
                                x='Máquina',
                                text_auto= True,
                                title= 'Média de consumo de energia')
+
+## Manutenção
+
+fig_qtd_maquinas_manutencao = px.bar(qtd_maquina_manutencao,
+                                     y= 'QTD_manutencao',
+                                     x= 'Máquina',
+                                     text_auto= True,
+                                     color= 'Máquina',
+                                     title= 'Quantidade de paradads para manutenção')
+
+fig_manutencao_maquina_mes = px.pie(manutencao_maquina_mes,
+                                    names= 'Mes',
+                                    values= 'qtd',
+                                    title= 'Percentual de paradas para manutenção por mês')
+
+fig_media_vida_util = px.bar(media_vida_util,
+                             x= 'machine',
+                             y= 'predicted_remaining_life')
+
 #----------------------------------
 #         Dashboard
 #----------------------------------
 
 st.title("Dashboard")
 
-tab_home, tab_manutencao = st.tabs(['Home', 'Manutenção'])
+tab_home, tab_manutencao, tab_falhas = st.tabs(['Home', 'Manutenção', 'Falhas'])
 
 with tab_home:
+    col1, col2 = st.columns(2, border= True)
+    with col1:
+        idx_maior_temperatura = dados_sensores.index[dados_sensores['temperature'] == dados_sensores['temperature'].max()]
+        maquina_maior_temperatura = dados_sensores.iloc[idx_maior_temperatura[0]]['machine']
+        maior_temperatura = dados_sensores.iloc[idx_maior_temperatura[0]]['temperature']
+        st.metric(f'Máquina com maior temperatura: {maquina_maior_temperatura}', maior_temperatura , ' Graus')
+
+    with col2: 
+        idx_maior_vibracao = dados_sensores.index[dados_sensores['vibration'] == dados_sensores['vibration'].max()]
+        maquina_maior_vibracao = dados_sensores.iloc[idx_maior_vibracao[0]]['machine']
+        maior_vibracao = dados_sensores.iloc[idx_maior_vibracao[0]]['vibration']
+        st.metric(f'Máquina com maior vibração: {maquina_maior_vibracao}', maior_vibracao , ' mm/s')
+
+    col1, col2, col3 = st.columns(3, border= True)
+    with col1:
+        idx_maior_umidade = dados_sensores.index[dados_sensores['humidity'] == dados_sensores['humidity'].max()]
+        maquina_maior_umidade = dados_sensores.iloc[idx_maior_umidade[0]]['machine']
+        maior_umidade = dados_sensores.iloc[idx_maior_umidade[0]]['humidity']
+        st.metric(f'Máquina com maior umidade: {maquina_maior_umidade}', maior_umidade , ' %')
+
+    with col2: 
+        idx_maior_pressao = dados_sensores.index[dados_sensores['pressure'] == dados_sensores['pressure'].max()]
+        maquina_maior_pressao = dados_sensores.iloc[idx_maior_pressao[0]]['machine']
+        maior_pressao = dados_sensores.iloc[idx_maior_pressao[0]]['pressure']
+        st.metric(f'Máquina com maior pressão: {maquina_maior_pressao}', maior_pressao , ' kPa')
+
+    with col3: 
+        idx_maior_consumo = dados_sensores.index[dados_sensores['energy_consumption'] == dados_sensores['energy_consumption'].max()]
+        maquina_maior_consumo = dados_sensores.iloc[idx_maior_consumo[0]]['machine']
+        maior_consumo = dados_sensores.iloc[idx_maior_consumo[0]]['energy_consumption']
+        st.metric(f'Máquina com maior consumo de energia: {maquina_maior_consumo}', maior_consumo , ' kWh')
+
 
     st.plotly_chart(fig_media_total)
+    
     
     with st.container(height= 500):
         st.subheader('Média dos valores dos sensores por máquina')
@@ -129,4 +201,25 @@ with tab_home:
         st.plotly_chart(fig_media_pressao)
         st.plotly_chart(fig_media_consumo_energia)
 
-    st.dataframe(df_medias)
+with tab_manutencao:
+
+    col1, col2 = st.columns(2, border= True)
+    with col1:
+        idx_maior_manutencao = qtd_maquina_manutencao.index[qtd_maquina_manutencao['QTD_manutencao'] == qtd_maquina_manutencao['QTD_manutencao'].max()]
+        maquina_maior_manutencao = qtd_maquina_manutencao.iloc[idx_maior_manutencao[0]]['Máquina']
+        maior_manutencao = qtd_maquina_manutencao.iloc[idx_maior_manutencao[0]]['QTD_manutencao']
+        st.metric(f'Máquina com maior número de paradas para manutenção: {maquina_maior_manutencao}', maior_manutencao)
+
+        idx_menor_manutencao = qtd_maquina_manutencao.index[qtd_maquina_manutencao['QTD_manutencao'] == qtd_maquina_manutencao['QTD_manutencao'].min()]
+        maquina_menor_manutencao = qtd_maquina_manutencao.iloc[idx_menor_manutencao[0]]['Máquina']
+        menor_manutencao = qtd_maquina_manutencao.iloc[idx_menor_manutencao[0]]['QTD_manutencao']
+        st.metric(f'Máquina com menor número de paradas para manutenção: {maquina_menor_manutencao}', menor_manutencao)
+
+    with col2:
+        st.plotly_chart(fig_manutencao_maquina_mes)
+
+    st.plotly_chart(fig_qtd_maquinas_manutencao)
+    st.plotly_chart(fig_media_vida_util)
+
+    
+    st.dataframe(media_vida_util)
