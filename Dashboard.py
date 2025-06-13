@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-from sklearn.preprocessing import OrdinalEncoder
 
 #----------------------------------
 #            Dados
@@ -165,7 +164,7 @@ failure = percentual_falhas[percentual_falhas['machine_status'] == 'Failure'].gr
 unknown = percentual_falhas[percentual_falhas['machine_status'] == 'Unknown'].groupby('machine').size()
 
 percentual_falhas_maquinas = pd.DataFrame({
-    'Máquina' : maquinas,
+    'Máquina' : media_sensores.index,
     'Idle' : idle,
     'Running' : running,
     'Failure' : failure,
